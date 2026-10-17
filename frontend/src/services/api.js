@@ -1,4 +1,5 @@
-const API_BASE = '/api';
+const API_HOST = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const API_BASE = `${API_HOST}/api`;
 
 export async function fetchHealth() {
   const res = await fetch(`${API_BASE}/health`);
