@@ -1,0 +1,8 @@
+node_modules
+frontend/node_modules
+**/__pycache__
+**/.pytest_cache
+**/.git
+**/.env
+backend/uploads/*
+!backend/uploads/.gitkeep

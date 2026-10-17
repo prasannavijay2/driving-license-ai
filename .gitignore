@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+__pycache__/
+*.pyc
+
+# Environment & Keys
+.env
+backend/.env
+*.local
+
+# Build artifacts
+dist/
+build/
+
+# Uploads cache
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
