@@ -46,6 +46,7 @@ class DocumentMetadata(BaseModel):
     page_count: int = 1
     current_page: int = 1
     preview_images: List[str] = Field(default_factory=list)
+    preview_data_urls: List[str] = Field(default_factory=list)
     licences: List[LicenceData] = Field(default_factory=list)
     selected_index: int = 0
     extraction_source: str = "gemini-multimodal"

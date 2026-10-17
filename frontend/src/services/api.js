@@ -1,6 +1,14 @@
 const API_HOST = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const API_BASE = `${API_HOST}/api`;
 
+export function resolveImageUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${API_HOST}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
 export async function fetchHealth() {
   const res = await fetch(`${API_BASE}/health`);
   if (!res.ok) throw new Error('Failed to fetch health');

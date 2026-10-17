@@ -124,7 +124,7 @@ def load_sample(sample_id: str = Form(...), format: str = Form("png")):
         file_bytes = f.read()
         
     doc_id, saved_path, mime_type = validate_and_save_upload(file_bytes, sample_filename)
-    preview_urls, page_count, raw_pdf_text = process_document_to_images(doc_id, saved_path, mime_type)
+    preview_urls, preview_data_urls, page_count, raw_pdf_text = process_document_to_images(doc_id, saved_path, mime_type)
     
     # Process extraction
     primary_preview_path = settings.UPLOAD_DIR / doc_id / "page_1.png"
@@ -140,11 +140,12 @@ def load_sample(sample_id: str = Form(...), format: str = Form("png")):
     doc_meta = DocumentMetadata(
         document_id=doc_id,
         file_name=sample_filename,
-        file_url=f"/uploads/{doc_id}/{saved_path.name}",
+        file_url=f"/api/document/{doc_id}/original",
         file_type=mime_type,
         page_count=page_count,
         current_page=1,
         preview_images=preview_urls,
+        preview_data_urls=preview_data_urls,
         licences=licences,
         selected_index=0,
         extraction_source=extraction_source
@@ -167,7 +168,7 @@ async def upload_document(file: UploadFile = File(...)):
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
         
-    preview_urls, page_count, raw_pdf_text = process_document_to_images(doc_id, saved_path, mime_type)
+    preview_urls, preview_data_urls, page_count, raw_pdf_text = process_document_to_images(doc_id, saved_path, mime_type)
     
     primary_preview_path = settings.UPLOAD_DIR / doc_id / "page_1.png"
     extraction_source = "gemini-multimodal"
@@ -182,11 +183,12 @@ async def upload_document(file: UploadFile = File(...)):
     doc_meta = DocumentMetadata(
         document_id=doc_id,
         file_name=file.filename,
-        file_url=f"/uploads/{doc_id}/{saved_path.name}",
+        file_url=f"/api/document/{doc_id}/original",
         file_type=mime_type,
         page_count=page_count,
         current_page=1,
         preview_images=preview_urls,
+        preview_data_urls=preview_data_urls,
         licences=licences,
         selected_index=0,
         extraction_source=extraction_source
@@ -261,3 +263,27 @@ def export_licence_json(document_id: str, licence_index: int = 0):
             "Content-Disposition": f"attachment; filename=driving_licence_{licence_data.dl_number or document_id}.json"
         }
     )
+
+@router.get("/document/{document_id}/image/{page_idx}")
+def get_document_page_image(document_id: str, page_idx: int = 1):
+    img_path = settings.UPLOAD_DIR / document_id / f"page_{page_idx}.png"
+    if not img_path.exists():
+        raise HTTPException(status_code=404, detail="Page image not found.")
+    return FileResponse(
+        img_path,
+        media_type="image/png",
+        headers={
+            "Cache-Control": "public, max-age=86400",
+            "Access-Control-Allow-Origin": "*"
+        }
+    )
+
+@router.get("/document/{document_id}/original")
+def get_document_original(document_id: str):
+    doc_dir = settings.UPLOAD_DIR / document_id
+    if not doc_dir.exists():
+        raise HTTPException(status_code=404, detail="Document not found.")
+    for f in doc_dir.iterdir():
+        if f.stem == "original":
+            return FileResponse(f, headers={"Access-Control-Allow-Origin": "*"})
+    raise HTTPException(status_code=404, detail="Original document not found.")

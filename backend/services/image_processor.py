@@ -31,16 +31,24 @@ def validate_and_save_upload(file_bytes: bytes, filename: str) -> Tuple[str, Pat
         
     return doc_id, saved_path, mime_type
 
-def process_document_to_images(doc_id: str, file_path: Path, mime_type: str) -> Tuple[List[str], int, str]:
+def file_to_data_url(file_path: Path) -> str:
+    import base64
+    with open(file_path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:image/png;base64,{b64}"
+
+def process_document_to_images(doc_id: str, file_path: Path, mime_type: str) -> Tuple[List[str], List[str], int, str]:
     """
-    Processes the uploaded file into high-quality preview PNGs.
+    Processes the uploaded file into high-quality preview PNGs and base64 data URLs.
     Returns:
-    - preview_relative_urls: list of web accessible relative URLs
+    - preview_urls: list of web accessible relative URLs
+    - preview_data_urls: list of direct base64 data URIs (guaranteed to render regardless of domain/CORS)
     - page_count: total pages
     - raw_pdf_text: any native text found
     """
     doc_dir = file_path.parent
     preview_urls = []
+    preview_data_urls = []
     raw_pdf_text = ""
     
     if mime_type == "application/pdf":
@@ -56,7 +64,8 @@ def process_document_to_images(doc_id: str, file_path: Path, mime_type: str) -> 
             img_filename = f"page_{idx + 1}.png"
             img_path = doc_dir / img_filename
             pix.save(str(img_path))
-            preview_urls.append(f"/uploads/{doc_id}/{img_filename}")
+            preview_urls.append(f"/api/document/{doc_id}/image/{idx + 1}")
+            preview_data_urls.append(file_to_data_url(img_path))
             
         pdf_doc.close()
     else:
@@ -68,6 +77,7 @@ def process_document_to_images(doc_id: str, file_path: Path, mime_type: str) -> 
         preview_filename = "page_1.png"
         preview_path = doc_dir / preview_filename
         img.save(preview_path, "PNG")
-        preview_urls.append(f"/uploads/{doc_id}/{preview_filename}")
+        preview_urls.append(f"/api/document/{doc_id}/image/1")
+        preview_data_urls.append(file_to_data_url(preview_path))
         
-    return preview_urls, page_count, raw_pdf_text.strip()
+    return preview_urls, preview_data_urls, page_count, raw_pdf_text.strip()

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Eye, EyeOff, Layers, ChevronLeft, ChevronRight, ExternalLink, ArrowLeft } from 'lucide-react';
+import { resolveImageUrl } from '../services/api';
 
 export default function DocumentViewer({
   docMetadata,
@@ -18,7 +19,15 @@ export default function DocumentViewer({
 
   const currentLicence = docMetadata.licences[selectedLicenceIndex] || docMetadata.licences[0] || {};
   const boundingBoxes = currentLicence.bounding_boxes || {};
-  const previewImage = docMetadata.preview_images[currentPage - 1] || docMetadata.preview_images[0];
+  
+  // Prefer direct base64 data URI (guaranteed to render everywhere), fallback to resolved URL
+  const rawPreview =
+    (docMetadata.preview_data_urls && docMetadata.preview_data_urls[currentPage - 1]) ||
+    docMetadata.preview_images?.[currentPage - 1] ||
+    docMetadata.preview_images?.[0] ||
+    '';
+  const previewImage = resolveImageUrl(rawPreview);
+  const fileUrl = resolveImageUrl(docMetadata.file_url);
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 2.5));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.6));
@@ -153,7 +162,7 @@ export default function DocumentViewer({
           </div>
 
           <a
-            href={docMetadata.file_url}
+            href={fileUrl}
             target="_blank"
             rel="noreferrer"
             className="p-1.5 text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700 transition"
@@ -176,6 +185,14 @@ export default function DocumentViewer({
           <img
             src={previewImage}
             alt="Uploaded Driving Licence"
+            onError={(e) => {
+              if (docMetadata?.document_id && !e.target.src.startsWith('data:')) {
+                const apiFallback = resolveImageUrl(`/api/document/${docMetadata.document_id}/image/${currentPage}`);
+                if (e.target.src !== apiFallback) {
+                  e.target.src = apiFallback;
+                }
+              }
+            }}
             className="rounded-2xl shadow-2xl max-w-full max-h-[70vh] object-contain border border-slate-800 select-none pointer-events-none"
           />
 
